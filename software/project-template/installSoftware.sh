@@ -2,9 +2,6 @@
 
 set -e
 
-# ==========================================
-# Software Installation
-# ==========================================
 
 echo ""
 echo "=========================================="
@@ -123,21 +120,37 @@ fi
 echo ""
 echo "[4/4] Installing software..."
 
-# ==========================================
-# SOFTWARE-SPECIFIC INSTALLATION GOES HERE
-# ==========================================
+# Initialize Conda for this Bash session
+CONDA_BASE="$(dirname "$(dirname "$CONDA")")"
+source "$CONDA_BASE/etc/profile.d/conda.sh" || {
+    echo "ERROR: Could not initialize Conda."
+    exit 1
+}
 
-echo "      Software installation commands go here."
+# Activate by name
+conda activate "$ENVIRONMENT_NAME" || {
+    echo "ERROR: Failed to activate environment '$ENVIRONMENT_NAME'."
+    exit 1
+}
+
+# Check whether Git is installed in WSL
+if ! command -v git >/dev/null 2>&1; then
+    echo "Git not found. Installing Git..."
+
+    sudo apt-get update && sudo apt-get install -y git || {
+        echo "ERROR: Failed to install Git."
+        exit 1
+    }
+fi
+
+# --------!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------
+# place all bash commands for installation below
+# --------!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------
 
 
-# ------------------------------------------
-# Verification
-# ------------------------------------------
 
-echo ""
-echo "Verifying installation..."
 
-"$CONDA" run -n "$ENVIRONMENT_NAME" python --version
+
 
 echo ""
 echo "=========================================="

@@ -1,0 +1,36 @@
+name: PaddlePaddle
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+
+  - pip:
+    - "numpy<2.0"
+    - tqdm
+    - typeguard
+    - "visualdl>=2.2.0"
+    - "opencv-python<=4.6.0"
+    - PyYAML
+    - shapely
+    - scipy
+    - terminaltables
+    - Cython
+    - "pycocotools==2.0.8"
+    - "setuptools<82"
+    - Pillow
+    - packaging
+    - scikit-learn
+
+    # MOT evaluation and inference
+    - lapx
+    - motmetrics
+
+    # Vehicle plate detection
+    - pyclipper
+
+    # CULane data augmentation
+    - "imgaug>=0.4.0"

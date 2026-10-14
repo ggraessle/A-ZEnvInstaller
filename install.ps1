@@ -14,7 +14,6 @@ $UbuntuDistro = "Ubuntu"
 
 $MinicondaPath = "/home/$LinuxUsername/miniconda3"
 
-$CondaEnvironment = "project-env"
 
 
 
@@ -42,7 +41,7 @@ if (-not $isAdmin) {
     Write-Host "Requesting Administrator privileges..." -ForegroundColor Yellow
 
     Start-Process powershell.exe `
-        -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
+        -ArgumentList "-noExit -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
         -Verb RunAs
 
     exit
@@ -86,7 +85,6 @@ else {
     Write-Host "After restarting, run install.bat again."
     Write-Host ""
 
-    pause
     exit
 }
 
@@ -189,7 +187,6 @@ Write-Host "The next step will configure the Ubuntu"
 Write-Host "Linux user and prepare the environment."
 Write-Host ""
 
-pause
 
 
 
@@ -202,10 +199,12 @@ Write-Host ""
 Write-Host "[5/6] Configuring Ubuntu user..."
 
 # Check whether the user already exists
-$userExists = wsl -d $UbuntuDistro -u root -- `
-    bash -c "id -u '$LinuxUsername' >/dev/null 2>&1; echo `$?"
+wsl -d $UbuntuDistro -u root -- `
+    bash -c "getent passwd '$LinuxUsername' >/dev/null 2>&1"
 
-if ($userExists.Trim() -eq "0") {
+$userExists = ($LASTEXITCODE -eq 0)
+
+if ($userExists) {
 
     Write-Host "      User '$LinuxUsername' already exists." -ForegroundColor Green
 
@@ -215,7 +214,7 @@ else {
     Write-Host "      Creating user '$LinuxUsername'..."
 
     wsl -d $UbuntuDistro -u root -- `
-        bash -c "useradd -m -s /bin/bash '$LinuxUsername'"
+        useradd -m -s /bin/bash $LinuxUsername
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "      ERROR: Failed to create Linux user." -ForegroundColor Red
@@ -223,56 +222,80 @@ else {
     }
 
     Write-Host "      User created." -ForegroundColor Green
+
+    # Set password
+    Write-Host "      Configuring password..."
+
+    $escapedPassword = $LinuxPassword.Replace("'", "'\''")
+
+    wsl -d $UbuntuDistro -u root -- `
+        bash -c "echo '$LinuxUsername`:$escapedPassword' | chpasswd"
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      ERROR: Failed to set Linux password." -ForegroundColor Red
+        exit 1
+    }
+
+    # Add user to sudo group
+    Write-Host "      Configuring sudo privileges..."
+
+    wsl -d $UbuntuDistro -u root -- `
+        usermod -aG sudo $LinuxUsername
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      ERROR: Failed to configure sudo." -ForegroundColor Red
+        exit 1
+    }
 }
 
-# Set password
-Write-Host "      Configuring password..."
+# ==========================================
+# Configure WSL default user if necessary
+# ==========================================
 
-$escapedPassword = $LinuxPassword.Replace("'", "'\''")
+Write-Host "      Checking default WSL user..."
 
-wsl -d $UbuntuDistro -u root -- `
-    bash -c "echo '$LinuxUsername`:$escapedPassword' | chpasswd"
+$currentDefaultUser = wsl -d $UbuntuDistro -u root -- `
+    bash -c "grep -E '^[[:space:]]*default[[:space:]]*=' /etc/wsl.conf 2>/dev/null | tail -n 1 | cut -d '=' -f 2 | tr -d '[:space:]'"
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "      ERROR: Failed to set Linux password." -ForegroundColor Red
+    Write-Host "      ERROR: Failed to check the default WSL user." -ForegroundColor Red
     exit 1
 }
 
-# Add user to sudo group
-Write-Host "      Configuring sudo privileges..."
+$currentDefaultUser = ($currentDefaultUser | Out-String).Trim()
 
-wsl -d $UbuntuDistro -u root -- `
-    usermod -aG sudo $LinuxUsername
+if ($currentDefaultUser -eq $LinuxUsername) {
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "      ERROR: Failed to configure sudo." -ForegroundColor Red
-    exit 1
+    Write-Host "      '$LinuxUsername' is already the default WSL user." -ForegroundColor Green
+
 }
+else {
 
-# Configure WSL default user
-Write-Host "      Configuring default WSL user..."
+    Write-Host "      Current default user: '$currentDefaultUser'"
+    Write-Host "      Setting default user to '$LinuxUsername'..."
 
-$wslConfig = @"
+
+    $wslConfig = @"
 [user]
 default=$LinuxUsername
 "@
 
-# Write configuration file using root
-$encodedConfig = [Convert]::ToBase64String(
-    [System.Text.Encoding]::UTF8.GetBytes($wslConfig)
-)
+    # Write configuration file using root
+    $encodedConfig = [Convert]::ToBase64String(
+        [System.Text.Encoding]::UTF8.GetBytes($wslConfig)
+    )
 
-wsl -d $UbuntuDistro -u root -- `
-    bash -c "echo '$encodedConfig' | base64 -d > /etc/wsl.conf"
+    wsl -d $UbuntuDistro -u root -- `
+        bash -c "echo '$encodedConfig' | base64 -d > /etc/wsl.conf"
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "      ERROR: Failed to configure /etc/wsl.conf." -ForegroundColor Red
-    exit 1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "      ERROR: Failed to configure /etc/wsl.conf." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "      Linux user configured successfully." -ForegroundColor Green
+
 }
-
-Write-Host "      Linux user configured successfully." -ForegroundColor Green
-
-
 
 
 Write-Host ""
@@ -329,8 +352,6 @@ Write-Host "WSL 2 and Ubuntu are configured."
 Write-Host "The default Linux user is: $LinuxUsername"
 Write-Host ""
 
-pause
-
 
 
 
@@ -341,10 +362,14 @@ pause
 Write-Host ""
 Write-Host "[6/6] Checking Miniconda..."
 
-$condaCheck = wsl -d $UbuntuDistro -u $LinuxUsername -- `
-    bash -c "test -x '$MinicondaPath/bin/conda'; echo `$?"
+$MinicondaPath = "/home/$LinuxUsername/miniconda3"
 
-if ($condaCheck.Trim() -eq "0") {
+wsl -d $UbuntuDistro -u $LinuxUsername -- `
+    bash -c "test -x '$MinicondaPath/bin/conda'"
+
+$condaInstalled = ($LASTEXITCODE -eq 0)
+
+if ($condaInstalled) {
 
     Write-Host "      Miniconda is already installed." -ForegroundColor Green
 
@@ -404,8 +429,27 @@ $condaLocation = wsl -d $UbuntuDistro -u $LinuxUsername -- `
 
 Write-Host "      $condaLocation"
 
-pause
 
+
+
+# ------------------------------------------
+# Initialize Conda for Bash
+# ------------------------------------------
+
+if ($condaInstalled) {
+    Write-Host ""
+    Write-Host "Initializing Conda for Bash..."
+
+    wsl -d $UbuntuDistro -u $LinuxUsername -- `
+        bash -c "$MinicondaPath/bin/conda init bash"
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Failed to initialize Conda for Bash." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Conda initialized successfully."
+}
 
 # ------------------------------------------
 # Begin Conda env creation and software installation

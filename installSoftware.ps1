@@ -11,8 +11,11 @@ $ErrorActionPreference = "Stop"
 $LinuxUsername = "linuxnerd"
 $UbuntuDistro = "Ubuntu"
 
+# ----------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------------------------------
 # Name of the software installation folder; update this line to switch what is being installed
-$SoftwareName = "project-template"
+# ----------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------------------------------
+
+$SoftwareName = "PaddlePaddle"
 
 
 # ==========================================
@@ -59,7 +62,7 @@ if (-not (Test-Path $SoftwareScriptWindows)) {
 # ==========================================
 
 $SoftwareScriptLinux = wsl -d $UbuntuDistro -- `
-    wslpath -a "'$SoftwareScriptWindows'"
+    wslpath -a "$SoftwareScriptWindows"
 
 
 if ($LASTEXITCODE -ne 0) {
@@ -70,6 +73,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+$SoftwareScriptLinux = ($SoftwareScriptLinux | Out-String).Trim()
 
 # ==========================================
 # Display Information
