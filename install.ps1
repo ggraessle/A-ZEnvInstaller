@@ -133,11 +133,15 @@ $ubuntu = $distros | Where-Object {
 
 if ($ubuntu) {
 
+    $UbuntuDistro = $ubuntu[0]
+
     Write-Host "      Ubuntu is already installed:" -ForegroundColor Green
 
     foreach ($distro in $ubuntu) {
         Write-Host "      $distro" -ForegroundColor Green
     }
+
+    Write-Host "      Using distribution: $UbuntuDistro" -ForegroundColor Cyan
 
 }
 else {
