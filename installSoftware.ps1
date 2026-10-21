@@ -2,21 +2,23 @@
 # Software Installation Launcher
 # ==========================================
 
-$ErrorActionPreference = "Stop"
-
 # ------------------------------------------
 # Configuration
 # ------------------------------------------
 
+param(
+    [string]$UbuntuDistro = "Ubuntu"
+)
+
 $LinuxUsername = "linuxnerd"
-$UbuntuDistro = "Ubuntu"
+
+$ErrorActionPreference = "Stop"
 
 # ----------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------------------------------
 # Name of the software installation folder; update this line to switch what is being installed
 # ----------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------------------------------
 
 $SoftwareName = "PaddlePaddle"
-
 
 # ==========================================
 # Locate Software Installer

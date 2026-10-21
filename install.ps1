@@ -463,7 +463,7 @@ Write-Host ""
 Write-Host "Launching software installer..." -ForegroundColor Cyan
 Write-Host ""
 
-& "$PSScriptRoot\installSoftware.ps1"
+& "$PSScriptRoot\installSoftware.ps1" -UbuntuDistro $UbuntuDistro
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
