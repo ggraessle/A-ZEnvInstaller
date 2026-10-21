@@ -119,13 +119,23 @@ $wslList = wsl --list --quiet 2>$null
 $distros = @(
     $wslList |
     ForEach-Object {
-        $_ -replace "`0", ""
-        $_.Trim()
+        ($_ -replace "`0", "").Trim()
     } |
     Where-Object {
         $_ -ne ""
     }
 )
+
+Write-Host "DEBUG: WSL distributions detected:"
+$distros | ForEach-Object {
+    Write-Host "  [$_]"
+}
+
+Write-Host "DEBUG: Ubuntu matches:"
+$ubuntu = @($distros | Where-Object { $_ -like "Ubuntu*" })
+$ubuntu | ForEach-Object {
+    Write-Host "  [$_]"
+}
 
 $ubuntu = $distros | Where-Object {
     $_ -like "Ubuntu*"
